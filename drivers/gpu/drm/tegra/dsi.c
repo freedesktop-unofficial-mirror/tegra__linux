@@ -783,6 +783,131 @@ static void tegra_dsi_initialize(struct tegra_dsi *dsi)
 	tegra_dsi_writel(dsi, 0, DSI_GANGED_MODE_SIZE);
 }
 
+static int tegra_dsi_set_lp_clk(struct tegra_dsi *dsi, unsigned long pclk)
+{
+	unsigned long bclk, timeout, value;
+	struct clk *clk, *parent, *base;
+	unsigned int mul, div;
+	int err;
+
+	err = tegra_dsi_get_muldiv(dsi->format, &mul, &div);
+	if (err < 0)
+		return err;
+
+	bclk = pclk * 8;
+
+	clk = clk_get_parent(dsi->clk);
+	parent = clk_get_parent(clk);
+	base = clk_get_parent(parent);
+
+	err = clk_set_rate(base, pclk * 2);
+	if (err < 0)
+		return err;
+
+	/* one frame high-speed transmission timeout */
+	timeout = bclk / 512;
+	value = DSI_TIMEOUT_LRX(0x2000) | DSI_TIMEOUT_HTX(timeout);
+	tegra_dsi_writel(dsi, value, DSI_TIMEOUT_0);
+
+	/* 2 ms peripheral timeout for panel */
+	timeout = 2 * bclk / 512 * 1000;
+	value = DSI_TIMEOUT_PR(timeout) | DSI_TIMEOUT_TA(0x2000);
+	tegra_dsi_writel(dsi, value, DSI_TIMEOUT_1);
+
+	value = DSI_TALLY_TA(0) | DSI_TALLY_LRX(0) | DSI_TALLY_HTX(0);
+	tegra_dsi_writel(dsi, value, DSI_TO_TALLY);
+
+	return 0;
+}
+
+static ssize_t tegra_dsi_host_transfer(struct mipi_dsi_host *host,
+				       struct mipi_dsi_msg *msg)
+{
+	struct tegra_dsi *dsi = host_to_tegra(host);
+	unsigned long value, timeout;
+	const u8 *tx = msg->tx_buf;
+	unsigned int count = 0, i;
+	int err;
+
+	dev_info(dsi->dev, "> %s(host=%p, msg=%p)\n", __func__, host, msg);
+
+	/* XXX */
+	drm_panel_enable(dsi->output.panel);
+
+	value = tegra_dsi_readl(dsi, DSI_POWER_CONTROL);
+	value |= DSI_POWER_CONTROL_ENABLE;
+	tegra_dsi_writel(dsi, value, DSI_POWER_CONTROL);
+	usleep_range(300, 1000);
+
+	err = tegra_dsi_set_lp_clk(dsi, 10000000);
+	if (err < 0) {
+		dev_err(dsi->dev, "failed to setup low-power clock: %d\n", err);
+		return err;
+	}
+
+	tegra_dsi_writel(dsi, DSI_HOST_FIFO_DEPTH, DSI_MAX_THRESHOLD);
+
+	value = tegra_dsi_readl(dsi, DSI_CONTROL);
+	value = 0x00003031;
+	tegra_dsi_writel(dsi, value, DSI_CONTROL);
+
+	value = tegra_dsi_readl(dsi, DSI_HOST_CONTROL);
+	value = 0x00102003;
+	tegra_dsi_writel(dsi, value, DSI_HOST_CONTROL);
+
+	if (msg->rx_buf && msg->rx_len > 0) {
+		value = tegra_dsi_readl(dsi, DSI_HOST_CONTROL);
+		value |= DSI_HOST_CONTROL_BTA;
+		tegra_dsi_writel(dsi, value, DSI_HOST_CONTROL);
+	}
+
+	value = ((msg->channel & 0x3) << 6) | (msg->type & 0x3f);
+
+	value |= tx[0] <<  8;
+	value |= tx[1] << 16;
+
+	tegra_dsi_writel(dsi, value, DSI_WR_DATA);
+
+	tegra_dsi_writel(dsi, 0x00000002, DSI_TRIGGER);
+
+	timeout = jiffies + msecs_to_jiffies(250);
+
+	while (true) {
+		value = tegra_dsi_readl(dsi, DSI_TRIGGER);
+		if ((value & 0x00000002) == 0)
+			break;
+
+		if (time_after(jiffies, timeout))
+			return -ETIMEDOUT;
+
+		usleep_range(25, 100);
+	}
+
+	timeout = jiffies + msecs_to_jiffies(250);
+
+	while (true) {
+		usleep_range(1000, 2000);
+
+		value = tegra_dsi_readl(dsi, DSI_STATUS);
+		count = value & 0x1f;
+
+		if (count > 0)
+			break;
+
+		if (time_after(jiffies, timeout))
+			return -ETIMEDOUT;
+	}
+
+	for (i = 0; i < count; i++)
+		tegra_dsi_readl(dsi, DSI_RD_DATA);
+
+	/* XXX */
+	drm_panel_disable(dsi->output.panel);
+
+	dev_info(dsi->dev, "< %s()\n", __func__);
+	return 0;
+}
+
 static int tegra_dsi_host_attach(struct mipi_dsi_host *host,
 				 struct mipi_dsi_device *device)
 {
@@ -796,6 +921,27 @@ static int tegra_dsi_host_attach(struct mipi_dsi_host *host,
 	if (output->panel) {
 		if (output->connector.dev)
 			drm_helper_hpd_irq_event(output->connector.dev);
+
+		if (0) {
+			struct mipi_dsi_msg msg;
+			u8 tx[2], rx[2];
+			ssize_t err;
+
+			rx[0] = rx[1] = 0;
+			tx[0] = tx[1] = 0;
+
+			memset(&msg, 0, sizeof(msg));
+			msg.channel = 0;
+			msg.type = 0x05;
+			msg.tx_buf = tx;
+			msg.tx_len = 2;
+			msg.rx_buf = rx;
+			msg.rx_len = 2;
+
+			err = host->ops->transfer(&dsi->host, &msg);
+			if (err < 0)
+				dev_err(dsi->dev, "dsi_host_transfer() failed: %zd\n", err);
+		}
 	}
 
 	return 0;
@@ -820,6 +966,7 @@ static int tegra_dsi_host_detach(struct mipi_dsi_host *host,
 static const struct mipi_dsi_host_ops tegra_dsi_host_ops = {
 	.attach = tegra_dsi_host_attach,
 	.detach = tegra_dsi_host_detach,
+	.transfer = tegra_dsi_host_transfer,
 };
 
 static int tegra_dsi_probe(struct platform_device *pdev)
