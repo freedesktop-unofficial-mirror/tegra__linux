@@ -17,6 +17,17 @@
 	};
 
 	host1x@50000000 {
+		hdmi@54280000 {
+			status = "okay";
+
+			vdd-supply = <&vdd_hdmi_5v0_reg>;
+			pll-supply = <&pll_hdmi_reg>;
+
+			nvidia,ddc-i2c-bus = <&hdmi_ddc>;
+			nvidia,hpd-gpio =
+				<&gpio TEGRA_GPIO(N, 7) GPIO_ACTIVE_HIGH>;
+		};
+
 		sor@54540000 {
 			status = "okay";
 
@@ -624,7 +635,7 @@
 		clock-frequency = <100000>;
 	};
 
-	i2c@7000c700 {
+	hdmi_ddc: i2c@7000c700 {
 		status = "okay";
 		clock-frequency = <100000>;
 	};
@@ -1109,6 +1120,15 @@
 			regulator-max-microvolt = <3300000>;
 			enable-active-high;
 			gpio = <&as3722 4 GPIO_ACTIVE_HIGH>;
+		};
+
+		pll_hdmi_reg: regulator@9 {
+			compatible = "regulator-fixed";
+			reg = <9>;
+			regulator-name = "avdd_hdmi_pll";
+			regulator-min-microvolt = <1050000>;
+			regulator-max-microvolt = <1050000>;
+			gpio = <&gpio TEGRA_GPIO(H, 7) GPIO_ACTIVE_LOW>;
 		};
 	};
 
