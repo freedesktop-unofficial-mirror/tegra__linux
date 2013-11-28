@@ -21,7 +21,8 @@
 		#address-cells = <1>;
 		#size-cells = <1>;
 
-		ranges = <0x54000000 0x54000000 0x01000000>;
+		ranges = <0x54000000 0x54000000 0x01000000>,
+			 <0x57000000 0x57000000 0x09000000>;
 
 		dc@54200000 {
 			compatible = "nvidia,tegra124-dc";
@@ -80,6 +81,22 @@
 			clock-names = "dpaux", "parent";
 			resets = <&tegra_car 181>;
 			reset-names = "dpaux";
+			status = "disabled";
+		};
+
+		gpu@57000000 {
+			compatible = "nvidia,tegra124-gk20a";
+			reg = <0x57000000 0x01000000>,
+			      <0x58000000 0x08000000>;
+			reg-names = "bar0", "bar1";
+			interrupts = <GIC_SPI 157 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 158 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "stall", "nonstall";
+			clocks = <&tegra_car TEGRA124_CLK_GPU>,
+				 <&tegra_car TEGRA124_CLK_PLL_P_OUT5>;
+			clock-names = "gpu", "pll";
+			resets = <&tegra_car 184>;
+			reset-names = "gpu";
 			status = "disabled";
 		};
 	};
