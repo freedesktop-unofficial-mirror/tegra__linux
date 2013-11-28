@@ -16,4 +16,6 @@ tegra-drm-y := \
 	gr2d.o \
 	gr3d.o
 
+tegra-drm-y += gk20a.o
+
 obj-$(CONFIG_DRM_TEGRA) += tegra-drm.o
