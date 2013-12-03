@@ -187,6 +187,7 @@ enum tegra_output_type {
 	TEGRA_OUTPUT_HDMI,
 	TEGRA_OUTPUT_DSI,
 	TEGRA_OUTPUT_EDP,
+	TEGRA_OUTPUT_LVDS,
 };
 
 struct tegra_output {

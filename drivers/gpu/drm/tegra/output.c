@@ -352,6 +352,11 @@ int tegra_output_init(struct drm_device *drm, struct tegra_output *output)
 		encoder = DRM_MODE_ENCODER_TMDS;
 		break;
 
+	case TEGRA_OUTPUT_LVDS:
+		connector = DRM_MODE_CONNECTOR_LVDS;
+		encoder = DRM_MODE_ENCODER_LVDS;
+		break;
+
 	default:
 		connector = DRM_MODE_CONNECTOR_Unknown;
 		encoder = DRM_MODE_ENCODER_NONE;
