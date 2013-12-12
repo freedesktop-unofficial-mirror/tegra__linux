@@ -421,10 +421,12 @@ struct drm_dp_aux_msg {
 
 /**
  * struct drm_dp_aux - DisplayPort AUX channel
+ * @ddc: I2C adapter that can be used for I2C-over-AUX communication
  * @dev: pointer to struct device that is the parent for this AUX channel
  * @transfer: transfers a message representing a single AUX transaction
  */
 struct drm_dp_aux {
+	struct i2c_adapter ddc;
 	struct device *dev;
 
 	ssize_t (*transfer)(struct drm_dp_aux *aux,
@@ -482,5 +484,8 @@ struct drm_dp_link {
 
 int drm_dp_link_probe(struct drm_dp_aux *aux, struct drm_dp_link *link);
 int drm_dp_link_power_up(struct drm_dp_aux *aux, struct drm_dp_link *link);
+
+int drm_dp_aux_register_i2c_bus(struct drm_dp_aux *aux);
+void drm_dp_aux_unregister_i2c_bus(struct drm_dp_aux *aux);
 
 #endif /* _DRM_DP_HELPER_H_ */
