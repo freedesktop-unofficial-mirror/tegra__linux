@@ -34,6 +34,11 @@ struct drm_panel_funcs {
 	int (*disable)(struct drm_panel *panel);
 	int (*enable)(struct drm_panel *panel);
 	int (*get_modes)(struct drm_panel *panel);
+
+	int (*get_brightness_range)(struct drm_panel *panel, uint64_t *min,
+				    uint64_t *max);
+	int (*get_brightness)(struct drm_panel *panel, uint64_t *value);
+	int (*set_brightness)(struct drm_panel *panel, uint64_t value);
 };
 
 struct drm_panel {
@@ -58,6 +63,33 @@ static inline int drm_panel_enable(struct drm_panel *panel)
 {
 	if (panel && panel->funcs && panel->funcs->enable)
 		return panel->funcs->enable(panel);
+
+	return panel ? -ENOSYS : -EINVAL;
+}
+
+static inline int drm_panel_get_brightness_range(struct drm_panel *panel,
+						 uint64_t *min, uint64_t *max)
+{
+	if (panel && panel->funcs && panel->funcs->get_brightness_range)
+		return panel->funcs->get_brightness_range(panel, min, max);
+
+	return panel ? -ENOSYS : -EINVAL;
+}
+
+static inline int drm_panel_get_brightness(struct drm_panel *panel,
+					   uint64_t *value)
+{
+	if (panel && panel->funcs && panel->funcs->get_brightness)
+		return panel->funcs->get_brightness(panel, value);
+
+	return panel ? -ENOSYS : -EINVAL;
+}
+
+static inline int drm_panel_set_brightness(struct drm_panel *panel,
+					   uint64_t value)
+{
+	if (panel && panel->funcs && panel->funcs->set_brightness)
+		return panel->funcs->set_brightness(panel, value);
 
 	return panel ? -ENOSYS : -EINVAL;
 }
