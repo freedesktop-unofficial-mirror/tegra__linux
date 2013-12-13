@@ -174,10 +174,54 @@ static int panel_simple_get_modes(struct drm_panel *panel)
 	return num;
 }
 
+static int panel_simple_get_brightness_range(struct drm_panel *panel,
+					     uint64_t *min, uint64_t *max)
+{
+	struct panel_simple *p = to_panel_simple(panel);
+
+	if (!p->backlight)
+		return -ENODEV;
+
+	*max = p->backlight->props.max_brightness;
+	*min = 0;
+
+	return 0;
+}
+
+static int panel_simple_get_brightness(struct drm_panel *panel,
+				       uint64_t *value)
+{
+	struct panel_simple *p = to_panel_simple(panel);
+
+	if (!p->backlight)
+		return -ENODEV;
+
+	*value = p->backlight->props.brightness;
+
+	return 0;
+}
+
+static int panel_simple_set_brightness(struct drm_panel *panel,
+				       uint64_t value)
+{
+	struct panel_simple *p = to_panel_simple(panel);
+
+	if (!p->backlight)
+		return -ENODEV;
+
+	p->backlight->props.brightness = value;
+	backlight_update_status(p->backlight);
+
+	return 0;
+}
+
 static const struct drm_panel_funcs panel_simple_funcs = {
 	.disable = panel_simple_disable,
 	.enable = panel_simple_enable,
 	.get_modes = panel_simple_get_modes,
+	.get_brightness_range = panel_simple_get_brightness_range,
+	.get_brightness = panel_simple_get_brightness,
+	.set_brightness = panel_simple_set_brightness,
 };
 
 static int panel_simple_probe(struct device *dev, const struct panel_desc *desc)
