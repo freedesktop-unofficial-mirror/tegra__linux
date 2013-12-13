@@ -67,6 +67,39 @@ static const struct drm_connector_helper_funcs connector_helper_funcs = {
 	.best_encoder = tegra_connector_best_encoder,
 };
 
+static void tegra_output_add_panel_properties(struct tegra_output *output)
+{
+	struct drm_device *drm = output->connector.dev;
+	uint64_t min, max, value;
+	int err;
+
+	if (output->brightness)
+		return;
+
+	err = drm_panel_get_brightness_range(output->panel, &min, &max);
+	if (err < 0)
+		return;
+
+	err = drm_panel_get_brightness(output->panel, &value);
+	if (err < 0)
+		return;
+
+	output->brightness = drm_property_create_range(drm, 0, "brightness",
+						       min, max);
+	drm_object_attach_property(&output->connector.base, output->brightness,
+				   value);
+}
+
+static void tegra_output_remove_panel_properties(struct tegra_output *output)
+{
+	struct drm_device *drm = output->connector.dev;
+
+	if (output->brightness) {
+		drm_property_destroy(drm, output->brightness);
+		output->brightness = NULL;
+	}
+}
+
 static enum drm_connector_status
 tegra_connector_detect(struct drm_connector *connector, bool force)
 {
@@ -82,16 +115,37 @@ tegra_connector_detect(struct drm_connector *connector, bool force)
 		else
 			status = connector_status_connected;
 	} else {
-		if (!output->panel)
+		if (!output->panel) {
+			tegra_output_remove_panel_properties(output);
 			status = connector_status_disconnected;
-		else
+		} else {
+			tegra_output_add_panel_properties(output);
 			status = connector_status_connected;
+		}
 
 		if (connector->connector_type == DRM_MODE_CONNECTOR_LVDS)
 			status = connector_status_connected;
 	}
 
 	return status;
+}
+
+static int tegra_connector_set_property(struct drm_connector *connector,
+					struct drm_property *property,
+					uint64_t value)
+{
+	struct tegra_output *output = connector_to_output(connector);
+	int err;
+
+	if (output->panel) {
+		if (property == output->brightness) {
+			err = drm_panel_set_brightness(output->panel, value);
+			if (err < 0)
+				return err;
+		}
+	}
+
+	return 0;
 }
 
 static void drm_connector_clear(struct drm_connector *connector)
@@ -110,6 +164,7 @@ static const struct drm_connector_funcs connector_funcs = {
 	.dpms = drm_helper_connector_dpms,
 	.detect = tegra_connector_detect,
 	.fill_modes = drm_helper_probe_single_connector_modes,
+	.set_property = tegra_connector_set_property,
 	.destroy = tegra_connector_destroy,
 };
 

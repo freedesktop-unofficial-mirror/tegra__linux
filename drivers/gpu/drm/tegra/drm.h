@@ -204,6 +204,8 @@ struct tegra_output {
 
 	struct drm_encoder encoder;
 	struct drm_connector connector;
+
+	struct drm_property *brightness;
 };
 
 static inline struct tegra_output *encoder_to_output(struct drm_encoder *e)
