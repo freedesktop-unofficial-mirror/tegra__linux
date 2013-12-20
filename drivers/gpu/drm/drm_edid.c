@@ -1096,14 +1096,15 @@ EXPORT_SYMBOL(drm_edid_is_valid);
 
 #define DDC_SEGMENT_ADDR 0x30
 /**
- * Get EDID information via I2C.
+ * drm_do_probe_ddc_edid() - get EDID information via I2C
+ * @adapter: I2C adapter to use for DDC
+ * @buf: EDID data buffer to be filled
+ * @block: EDID block to read
+ * @len: EDID data buffer length
  *
- * \param adapter : i2c device adaptor
- * \param buf     : EDID data buffer to be filled
- * \param len     : EDID data buffer length
- * \return 0 on success or -1 on failure.
+ * Try to fetch EDID information using the specified I2C adapter.
  *
- * Try to fetch EDID information by calling i2c driver function.
+ * Returns 0 on success or -1 on failure.
  */
 static int
 drm_do_probe_ddc_edid(struct i2c_adapter *adapter, unsigned char *buf,
@@ -1242,10 +1243,10 @@ out:
 }
 
 /**
- * Probe DDC presence.
+ * drm_probe_ddc() - probe DDC presence
+ * @adapter: I2C adapter to use for DDC
  *
- * \param adapter : i2c device adaptor
- * \return 1 on success
+ * Returns true on success or false on failure.
  */
 bool
 drm_probe_ddc(struct i2c_adapter *adapter)
@@ -2133,6 +2134,7 @@ do_established_modes(struct detailed_timing *timing, void *c)
 
 /**
  * add_established_modes - get est. modes from EDID and add them
+ * @connector: connector to add mode(s) to
  * @edid: EDID block to scan
  *
  * Each EDID block contains a bitmap of the supported "established modes" list
@@ -2194,6 +2196,7 @@ do_standard_modes(struct detailed_timing *timing, void *c)
 
 /**
  * add_standard_modes - get std. modes from EDID and add them
+ * @connector: connector to add mode(s) to
  * @edid: EDID block to scan
  *
  * Standard modes can be calculated using the appropriate standard (DMT,
@@ -3236,13 +3239,13 @@ EXPORT_SYMBOL(drm_detect_hdmi_monitor);
 
 /**
  * drm_detect_monitor_audio - check monitor audio capability
+ * @edid: EDID block to scan
  *
  * Monitor should have CEA extension block.
  * If monitor has 'basic audio', but no CEA audio blocks, it's 'basic
  * audio' only. If there is any audio extension block and supported
  * audio format, assume at least 'basic audio' support, even if 'basic
  * audio' is not defined in EDID.
- *
  */
 bool drm_detect_monitor_audio(struct edid *edid)
 {
@@ -3281,6 +3284,7 @@ EXPORT_SYMBOL(drm_detect_monitor_audio);
 
 /**
  * drm_rgb_quant_range_selectable - is RGB quantization range selectable?
+ * @edid: EDID block to scan
  *
  * Check whether the monitor reports the RGB quantization range selection
  * as supported. The AVI infoframe can then be used to inform the monitor
