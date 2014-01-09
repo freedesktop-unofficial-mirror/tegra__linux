@@ -1175,8 +1175,6 @@ static int tegra_dc_init(struct host1x_client *client)
 	struct tegra_dc *dc = host1x_client_to_dc(client);
 	int err;
 
-	dc->pipe = tegra->drm->mode_config.num_crtc;
-
 	drm_crtc_init(tegra->drm, &dc->base, &tegra_crtc_funcs);
 	drm_mode_crtc_set_gamma_size(&dc->base, 256);
 	drm_crtc_helper_add(&dc->base, &tegra_crtc_helper_funcs);
@@ -1302,6 +1300,11 @@ static int tegra_dc_probe(struct platform_device *pdev)
 	dc->regs = devm_ioremap_resource(&pdev->dev, regs);
 	if (IS_ERR(dc->regs))
 		return PTR_ERR(dc->regs);
+
+	if (regs->start == 0x54200000)
+		dc->pipe = 0;
+	else
+		dc->pipe = 1;
 
 	dc->irq = platform_get_irq(pdev, 0);
 	if (dc->irq < 0) {
