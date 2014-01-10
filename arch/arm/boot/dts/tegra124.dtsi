@@ -34,6 +34,8 @@
 			clock-names = "dc", "parent";
 			resets = <&tegra_car 27>;
 			reset-names = "dc";
+
+			nvidia,head = <0>;
 		};
 
 		dc@54240000 {
@@ -45,6 +47,8 @@
 			clock-names = "dc", "parent";
 			resets = <&tegra_car 26>;
 			reset-names = "dc";
+
+			nvidia,head = <1>;
 		};
 
 		hdmi@54280000 {
