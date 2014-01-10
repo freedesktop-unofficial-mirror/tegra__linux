@@ -65,7 +65,7 @@
 			};
 		};
 
-		hdmi {
+		hdmi@54280000 {
 			status = "okay";
 
 			vdd-supply = <&sys_3v3_reg>;
