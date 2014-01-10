@@ -1175,6 +1175,36 @@ static int tegra_dc_init(struct host1x_client *client)
 	struct tegra_dc *dc = host1x_client_to_dc(client);
 	int err;
 
+	if (1) {
+		void __iomem *mc = ioremap_nocache(0x7000f000, SZ_4K);
+
+		switch (dc->pipe) {
+		case 0:
+			dev_info(client->dev, "latency allowance: display A\n");
+			dev_info(client->dev, "  %08x\n", readl(mc + 0x2e8));
+			dev_info(client->dev, "  %08x\n", readl(mc + 0x2ec));
+			dev_info(client->dev, "  %08x\n", readl(mc + 0x2f0));
+
+			writel(0x00200020, mc + 0x2e8);
+			writel(0x00200020, mc + 0x2ec);
+			writel(0x0000007f, mc + 0x2f0);
+			break;
+
+		case 1:
+			dev_info(client->dev, "latency allowance: display B\n");
+			dev_info(client->dev, "  %08x\n", readl(mc + 0x2f4));
+			dev_info(client->dev, "  %08x\n", readl(mc + 0x2f8));
+			dev_info(client->dev, "  %08x\n", readl(mc + 0x2fc));
+
+			writel(0x00200010, mc + 0x2f4);
+			writel(0x00200020, mc + 0x2f8);
+			writel(0x0000007f, mc + 0x2fc);
+			break;
+		}
+
+		iounmap(mc);
+	}
+
 	drm_crtc_init(tegra->drm, &dc->base, &tegra_crtc_funcs);
 	drm_mode_crtc_set_gamma_size(&dc->base, 256);
 	drm_crtc_helper_add(&dc->base, &tegra_crtc_helper_funcs);
