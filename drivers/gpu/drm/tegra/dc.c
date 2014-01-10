@@ -1233,6 +1233,20 @@ static const struct host1x_client_ops dc_client_ops = {
 	.exit = tegra_dc_exit,
 };
 
+static int tegra_dc_parse_dt(struct tegra_dc *dc)
+{
+	u32 value;
+	int err;
+
+	err = of_property_read_u32(dc->dev->of_node, "nvidia,head", &value);
+	if (err < 0)
+		return err;
+
+	dc->pipe = value;
+
+	return 0;
+}
+
 static const struct tegra_dc_soc_info tegra20_dc_soc_info = {
 	.supports_interlacing = false,
 };
@@ -1280,6 +1294,10 @@ static int tegra_dc_probe(struct platform_device *pdev)
 	dc->dev = &pdev->dev;
 	dc->soc = id->data;
 
+	err = tegra_dc_parse_dt(dc);
+	if (err < 0)
+		return err;
+
 	dc->clk = devm_clk_get(&pdev->dev, NULL);
 	if (IS_ERR(dc->clk)) {
 		dev_err(&pdev->dev, "failed to get clock\n");
@@ -1300,11 +1318,6 @@ static int tegra_dc_probe(struct platform_device *pdev)
 	dc->regs = devm_ioremap_resource(&pdev->dev, regs);
 	if (IS_ERR(dc->regs))
 		return PTR_ERR(dc->regs);
-
-	if (regs->start == 0x54200000)
-		dc->pipe = 0;
-	else
-		dc->pipe = 1;
 
 	dc->irq = platform_get_irq(pdev, 0);
 	if (dc->irq < 0) {
