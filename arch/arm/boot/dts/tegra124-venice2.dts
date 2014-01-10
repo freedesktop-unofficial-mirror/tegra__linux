@@ -16,6 +16,36 @@
 		reg = <0x80000000 0x80000000>;
 	};
 
+	host1x@50000000 {
+		hdmi@54280000 {
+			status = "okay";
+
+			vdd-supply = <&vdd_hdmi_5v0_reg>;
+			pll-supply = <&pll_hdmi_reg>;
+
+			nvidia,ddc-i2c-bus = <&hdmi_ddc>;
+			nvidia,hpd-gpio =
+				<&gpio TEGRA_GPIO(N, 7) GPIO_ACTIVE_HIGH>;
+		};
+
+		sor@54540000 {
+			status = "okay";
+
+			nvidia,dpaux = <&dpaux>;
+			nvidia,panel = <&panel>;
+		};
+
+		dpaux: dpaux@545c0000 {
+			vdd-supply = <&panel_3v3_reg>;
+			status = "okay";
+		};
+
+		gpu@57000000 {
+			vdd-supply = <&vdd_gpu>;
+			status = "okay";
+		};
+	};
+
 	pinmux: pinmux@70000868 {
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinmux_default>;
@@ -595,6 +625,14 @@
 	i2c@7000c400 {
 		status = "okay";
 		clock-frequency = <100000>;
+
+		trackpad {
+			compatible = "atmel,atmel_mxt_tp";
+			reg = <0x4b>;
+			interrupt-parent = <&gpio>;
+			interrupts = <TEGRA_GPIO(W, 3) 0>;
+			wakeup-source;
+		};
 	};
 
 	i2c@7000c500 {
@@ -602,7 +640,7 @@
 		clock-frequency = <100000>;
 	};
 
-	i2c@7000c700 {
+	hdmi_ddc: i2c@7000c700 {
 		status = "okay";
 		clock-frequency = <100000>;
 	};
@@ -715,7 +753,7 @@
 					regulator-always-on;
 				};
 
-				sd6 {
+				vdd_gpu: sd6 {
 					regulator-name = "vdd-gpu";
 					regulator-min-microvolt = <650000>;
 					regulator-max-microvolt = <1200000>;
@@ -757,7 +795,7 @@
 					ams,enable-tracking;
 				};
 
-				ldo4 {
+				cam_2v8_reg: ldo4 {
 					regulator-name = "vdd-cam";
 					regulator-min-microvolt = <2800000>;
 					regulator-max-microvolt = <2800000>;
@@ -771,12 +809,10 @@
 					regulator-max-microvolt = <1200000>;
 				};
 
-				ldo6 {
+				vddio_sdmmc3: ldo6 {
 					regulator-name = "vddio-sdmmc3";
 					regulator-min-microvolt = <1800000>;
 					regulator-max-microvolt = <3300000>;
-					regulator-boot-on;
-					regulator-always-on;
 				};
 
 				ldo7 {
@@ -928,6 +964,7 @@
 		power-gpios = <&gpio TEGRA_GPIO(R, 0) GPIO_ACTIVE_HIGH>;
 		status = "okay";
 		bus-width = <4>;
+		vmmc-supply = <&vddio_sdmmc3>;
 	};
 
 	sdhci@700b0600 {
@@ -939,6 +976,46 @@
 		i2s@70301100 {
 			status = "okay";
 		};
+	};
+
+	usb@7d000000 {
+		status = "okay";
+	};
+
+	usb-phy@7d000000 {
+		status = "okay";
+		vbus-supply = <&usb1_vbus_reg>;
+	};
+
+	usb@7d004000 {
+		status = "okay";
+	};
+
+	usb-phy@7d004000 {
+		status = "okay";
+		vbus-supply = <&cam_2v8_reg>;
+	};
+
+	usb@7d008000 {
+		status = "okay";
+	};
+
+	usb-phy@7d008000 {
+		status = "okay";
+		vbus-supply = <&usb3_vbus_reg>;
+	};
+
+	backlight: backlight {
+		compatible = "pwm-backlight";
+
+		enable-gpios = <&gpio TEGRA_GPIO(H, 2) GPIO_ACTIVE_HIGH>;
+		power-supply = <&vdd_bl_reg>;
+		pwms = <&pwm 1 1000000>;
+
+		brightness-levels = <0 4 8 16 32 64 128 255>;
+		default-brightness-level = <6>;
+
+		backlight-boot-off;
 	};
 
 	clocks {
@@ -964,6 +1041,13 @@
 			debounce-interval = <10>;
 			gpio-key,wakeup;
 		};
+	};
+
+	panel: panel {
+		compatible = "lg,lp129qe", "simple-panel";
+
+		backlight = <&backlight>;
+		ddc-i2c-bus = <&dpaux>;
 	};
 
 	regulators {
@@ -1018,7 +1102,8 @@
 			regulator-name = "vdd-bl";
 			regulator-min-microvolt = <3300000>;
 			regulator-max-microvolt = <3300000>;
-			gpio = <&gpio TEGRA_GPIO(P, 2) GPIO_ACTIVE_LOW>;
+			gpio = <&gpio TEGRA_GPIO(P, 2) GPIO_ACTIVE_HIGH>;
+			enable-active-high;
 		};
 
 		vdd_ts_sw_5v0: regulator@5 {
@@ -1064,6 +1149,15 @@
 			regulator-max-microvolt = <3300000>;
 			enable-active-high;
 			gpio = <&as3722 4 GPIO_ACTIVE_HIGH>;
+		};
+
+		pll_hdmi_reg: regulator@9 {
+			compatible = "regulator-fixed";
+			reg = <9>;
+			regulator-name = "avdd_hdmi_pll";
+			regulator-min-microvolt = <1050000>;
+			regulator-max-microvolt = <1050000>;
+			gpio = <&gpio TEGRA_GPIO(H, 7) GPIO_ACTIVE_LOW>;
 		};
 	};
 
