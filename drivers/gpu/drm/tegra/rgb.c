@@ -239,6 +239,7 @@ int tegra_dc_rgb_remove(struct tegra_dc *dc)
 int tegra_dc_rgb_init(struct drm_device *drm, struct tegra_dc *dc)
 {
 	struct tegra_rgb *rgb = to_rgb(dc->rgb);
+	struct drm_encoder *encoder;
 	int err;
 
 	if (!dc->rgb)
@@ -253,12 +254,14 @@ int tegra_dc_rgb_init(struct drm_device *drm, struct tegra_dc *dc)
 		return err;
 	}
 
+	encoder = &rgb->output.encoder;
+
 	/*
 	 * By default, outputs can be associated with each display controller.
 	 * RGB outputs are an exception, so we make sure they can be attached
 	 * to only their parent display controller.
 	 */
-	rgb->output.encoder.possible_crtcs = 1 << dc->pipe;
+	encoder->possible_crtcs = drm_helper_crtc_possible_mask(&dc->base);
 
 	return 0;
 }
