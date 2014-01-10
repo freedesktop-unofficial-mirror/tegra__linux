@@ -116,8 +116,10 @@
 #define DC_DISP_DISP_SIGNAL_OPTIONS1		0x401
 
 #define DC_DISP_DISP_WIN_OPTIONS		0x402
-#define HDMI_ENABLE (1 << 30)
-#define DSI_ENABLE  (1 << 29)
+#define HDMI_ENABLE	(1 << 30)
+#define DSI_ENABLE	(1 << 29)
+#define SOR_ENABLE	(1 << 25)
+#define CURSOR_ENABLE	(1 << 16)
 
 #define DC_DISP_DISP_MEM_HIGH_PRIORITY		0x403
 #define CURSOR_THRESHOLD(x)   (((x) & 0x03) << 24)
@@ -300,6 +302,8 @@
 #define  INTERLACE_STATUS (1 << 2)
 #define  INTERLACE_START  (1 << 1)
 #define  INTERLACE_ENABLE (1 << 0)
+
+#define DC_DISP_BLEND_CURSOR_CONTROL		0x4f1
 
 #define DC_WIN_CSC_YOF				0x611
 #define DC_WIN_CSC_KYRGB			0x612

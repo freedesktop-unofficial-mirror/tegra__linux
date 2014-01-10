@@ -200,6 +200,10 @@ config DMA_SHARED_BUFFER
 	  APIs extension; the file's descriptor can then be passed on to other
 	  driver.
 
+config DMA_BUF_TEST
+	tristate "DMA-BUF test module"
+	depends on DMA_SHARED_BUFFER
+
 config DMA_CMA
 	bool "DMA Contiguous Memory Allocator"
 	depends on HAVE_DMA_CONTIGUOUS && CMA

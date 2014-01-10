@@ -225,6 +225,79 @@ void tegra_dc_disable_vblank(struct tegra_dc *dc)
 	spin_unlock_irqrestore(&dc->lock, flags);
 }
 
+static int tegra_dc_cursor_set2(struct drm_crtc *crtc, struct drm_file *file,
+				uint32_t handle, uint32_t width,
+				uint32_t height, int32_t hot_x, int32_t hot_y)
+{
+	struct tegra_dc *dc = to_tegra_dc(crtc);
+	struct drm_gem_object *gem;
+	struct tegra_bo *bo = NULL;
+	unsigned long value;
+	int ret = 0;
+
+	dev_dbg(dc->dev, "> %s(crtc=%p, file=%p, handle=%x, width=%u, height=%u, hot_x=%d, hot_y=%d)\n",
+		__func__, crtc, file, handle, width, height, hot_x, hot_y);
+
+	if (handle) {
+		gem = drm_gem_object_lookup(crtc->dev, file, handle);
+		if (!gem) {
+			ret = -ENOENT;
+			goto out;
+		}
+
+		bo = to_tegra_bo(gem);
+	}
+
+	if (bo) {
+		value = (0 << 28) | (1 << 24) | bo->paddr >> 10;
+		tegra_dc_writel(dc, bo->paddr, DC_DISP_CURSOR_START_ADDR);
+
+		value = tegra_dc_readl(dc, DC_DISP_DISP_WIN_OPTIONS);
+		value |= CURSOR_ENABLE;
+		tegra_dc_writel(dc, value, DC_DISP_DISP_WIN_OPTIONS);
+
+		value = tegra_dc_readl(dc, DC_DISP_BLEND_CURSOR_CONTROL);
+		value |= (1 << 24);
+		value &= ~(3 << 16);
+		value &= ~(3 << 8);
+		value &= ~0xff;
+		tegra_dc_writel(dc, value, DC_DISP_BLEND_CURSOR_CONTROL);
+	} else {
+		value = tegra_dc_readl(dc, DC_DISP_DISP_WIN_OPTIONS);
+		value &= ~CURSOR_ENABLE;
+		tegra_dc_writel(dc, value, DC_DISP_DISP_WIN_OPTIONS);
+	}
+
+	tegra_dc_writel(dc, 1 << 15, DC_CMD_STATE_CONTROL);
+	tegra_dc_writel(dc, 1 << 7, DC_CMD_STATE_CONTROL);
+
+	tegra_dc_writel(dc, GENERAL_ACT_REQ << 8, DC_CMD_STATE_CONTROL);
+	tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
+
+out:
+	dev_dbg(dc->dev, "< %s() = %d\n", __func__, ret);
+	return ret;
+}
+
+static int tegra_dc_cursor_move(struct drm_crtc *crtc, int x, int y)
+{
+	struct tegra_dc *dc = to_tegra_dc(crtc);
+	int ret = 0;
+
+	dev_dbg(dc->dev, "> %s(crtc=%p, x=%d, y=%d)\n", __func__, crtc, x, y);
+
+	tegra_dc_writel(dc, (x << 16) | y, DC_DISP_CURSOR_POSITION);
+
+	tegra_dc_writel(dc, 1 << 15, DC_CMD_STATE_CONTROL);
+	tegra_dc_writel(dc, 1 << 7, DC_CMD_STATE_CONTROL);
+
+	tegra_dc_writel(dc, GENERAL_ACT_REQ << 8, DC_CMD_STATE_CONTROL);
+	tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
+
+	dev_dbg(dc->dev, "< %s() = %d\n", __func__, ret);
+	return ret;
+}
+
 static void tegra_dc_finish_page_flip(struct tegra_dc *dc)
 {
 	struct drm_device *drm = dc->base.dev;
@@ -301,6 +374,8 @@ static void tegra_dc_destroy(struct drm_crtc *crtc)
 }
 
 static const struct drm_crtc_funcs tegra_crtc_funcs = {
+	.cursor_set2 = tegra_dc_cursor_set2,
+	.cursor_move = tegra_dc_cursor_move,
 	.page_flip = tegra_dc_page_flip,
 	.set_config = drm_crtc_helper_set_config,
 	.destroy = tegra_dc_destroy,
@@ -1100,8 +1175,6 @@ static int tegra_dc_init(struct host1x_client *client)
 	struct tegra_dc *dc = host1x_client_to_dc(client);
 	int err;
 
-	dc->pipe = tegra->drm->mode_config.num_crtc;
-
 	drm_crtc_init(tegra->drm, &dc->base, &tegra_crtc_funcs);
 	drm_mode_crtc_set_gamma_size(&dc->base, 256);
 	drm_crtc_helper_add(&dc->base, &tegra_crtc_helper_funcs);
@@ -1227,6 +1300,11 @@ static int tegra_dc_probe(struct platform_device *pdev)
 	dc->regs = devm_ioremap_resource(&pdev->dev, regs);
 	if (IS_ERR(dc->regs))
 		return PTR_ERR(dc->regs);
+
+	if (regs->start == 0x54200000)
+		dc->pipe = 0;
+	else
+		dc->pipe = 1;
 
 	dc->irq = platform_get_irq(pdev, 0);
 	if (dc->irq < 0) {
