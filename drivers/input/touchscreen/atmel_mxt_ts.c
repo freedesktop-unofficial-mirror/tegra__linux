@@ -14,10 +14,13 @@
 #include <linux/module.h>
 #include <linux/delay.h>
 #include <linux/firmware.h>
+#include <linux/gpio.h>
 #include <linux/i2c.h>
 #include <linux/i2c/atmel_mxt_ts.h>
 #include <linux/input/mt.h>
 #include <linux/interrupt.h>
+#include <linux/of_gpio.h>
+#include <linux/of_irq.h>
 #include <linux/slab.h>
 
 /* Version */
@@ -851,7 +854,7 @@ static int mxt_initialize(struct mxt_data *data)
 	/* Soft reset */
 	mxt_write_object(data, MXT_GEN_COMMAND_T6,
 			MXT_COMMAND_RESET, 1);
-	msleep(MXT_RESET_TIME);
+	msleep(MXT_RESET_TIME + 50);
 
 	/* Update matrix size at info struct */
 	error = mxt_read_reg(client, MXT_MATRIX_X_SIZE, &val);
@@ -1126,6 +1129,78 @@ static void mxt_input_close(struct input_dev *dev)
 	mxt_stop(data);
 }
 
+static const u8 config[] = {
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0xFF, 0xFF, 0x32, 0x0A, 0x00, 0x14, 0x14, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x8B, 0x00, 0x00,
+	0x1B, 0x2A, 0x00, 0x20, 0x3C, 0x04, 0x05, 0x00,
+	0x02, 0x01, 0x00, 0x0A, 0x0A, 0x0A, 0x0A, 0xFF,
+	0x02, 0x55, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x64, 0x02, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x23,
+	0x00, 0x00, 0x00, 0x05, 0x0A, 0x15, 0x1E, 0x00,
+	0x00, 0x04, 0xFF, 0x03, 0x3F, 0x64, 0x64, 0x01,
+	0x0A, 0x14, 0x28, 0x4B, 0x00, 0x02, 0x00, 0x64,
+	0x00, 0x19, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x08, 0x10, 0x3C, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+};
+
+static struct mxt_platform_data *mxt_parse_dt(struct i2c_client *client)
+{
+	struct device_node *np = client->dev.of_node;
+	struct mxt_platform_data *pdata;
+	enum of_gpio_flags flags;
+	unsigned int irq;
+	int err, gpio;
+
+	pdata = devm_kzalloc(&client->dev, sizeof(*pdata), GFP_KERNEL);
+	if (!pdata)
+		return ERR_PTR(-ENOMEM);
+
+	pdata->x_line = 27;
+	pdata->y_line = 42;
+	pdata->x_size = 768;
+	pdata->y_size = 1366;
+	pdata->blen = 0x20;
+	pdata->threshold = 0x3c;
+	pdata->voltage = 3300000;
+	pdata->orient = 5;
+	pdata->config = config;
+	pdata->config_length = 157;
+
+	irq = irq_of_parse_and_map(np, 0);
+	if (!irq)
+		return ERR_PTR(-EINVAL);
+
+	pdata->irqflags = IRQF_TRIGGER_FALLING;
+
+	client->irq = irq;
+
+	gpio = of_get_named_gpio_flags(np, "reset-gpios", 0, &flags);
+	if (gpio_is_valid(gpio)) {
+		err = gpio_request_one(gpio, GPIOF_OUT_INIT_LOW, "reset");
+		if (err < 0) {
+			dev_err(&client->dev, "failed to request GPIO#%03u: %d\n",
+				gpio, err);
+			goto skip;
+		}
+
+		msleep(100);
+		gpio_set_value(gpio, 1);
+		msleep(200);
+	}
+
+skip:
+	return pdata;
+}
+
 static int mxt_probe(struct i2c_client *client,
 		const struct i2c_device_id *id)
 {
@@ -1135,8 +1210,13 @@ static int mxt_probe(struct i2c_client *client,
 	int error;
 	unsigned int num_mt_slots;
 
-	if (!pdata)
-		return -EINVAL;
+	if (!pdata) {
+		if (IS_ENABLED(CONFIG_OF) && client->dev.of_node)
+			pdata = mxt_parse_dt(client);
+
+		if (!pdata)
+			return -EINVAL;
+	}
 
 	data = kzalloc(sizeof(struct mxt_data), GFP_KERNEL);
 	input_dev = input_allocate_device();
@@ -1322,11 +1402,20 @@ static const struct i2c_device_id mxt_id[] = {
 };
 MODULE_DEVICE_TABLE(i2c, mxt_id);
 
+#ifdef CONFIG_OF
+static const struct of_device_id mxt_of_match[] = {
+	{ .compatible = "atmel,mxt-ts", },
+	{ }
+};
+MODULE_DEVICE_TABLE(of, mxt_of_match);
+#endif
+
 static struct i2c_driver mxt_driver = {
 	.driver = {
 		.name	= "atmel_mxt_ts",
 		.owner	= THIS_MODULE,
 		.pm	= &mxt_pm_ops,
+		.of_match_table = of_match_ptr(mxt_of_match),
 	},
 	.probe		= mxt_probe,
 	.remove		= mxt_remove,
