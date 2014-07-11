@@ -23,6 +23,7 @@ struct tegra_dc_soc_info {
 	bool supports_block_linear;
 	unsigned int pitch_align;
 	bool has_powergate;
+	unsigned int pitch_align;
 };
 
 struct tegra_plane {
@@ -1361,6 +1362,7 @@ static const struct tegra_dc_soc_info tegra20_dc_soc_info = {
 	.supports_block_linear = false,
 	.pitch_align = 8,
 	.has_powergate = false,
+	.pitch_align = 8,
 };
 
 static const struct tegra_dc_soc_info tegra30_dc_soc_info = {
@@ -1369,6 +1371,7 @@ static const struct tegra_dc_soc_info tegra30_dc_soc_info = {
 	.supports_block_linear = false,
 	.pitch_align = 8,
 	.has_powergate = false,
+	.pitch_align = 8,
 };
 
 static const struct tegra_dc_soc_info tegra114_dc_soc_info = {
@@ -1377,6 +1380,7 @@ static const struct tegra_dc_soc_info tegra114_dc_soc_info = {
 	.supports_block_linear = false,
 	.pitch_align = 64,
 	.has_powergate = true,
+	.pitch_align = 64,
 };
 
 static const struct tegra_dc_soc_info tegra124_dc_soc_info = {
@@ -1385,6 +1389,7 @@ static const struct tegra_dc_soc_info tegra124_dc_soc_info = {
 	.supports_block_linear = true,
 	.pitch_align = 64,
 	.has_powergate = true,
+	.pitch_align = 64,
 };
 
 static const struct of_device_id tegra_dc_of_match[] = {
