@@ -1567,6 +1567,7 @@ static int tegra_dc_remove(struct platform_device *pdev)
 	if (dc->soc->has_powergate)
 		tegra_powergate_power_off(dc->powergate);
 
+	reset_control_assert(dc->rst);
 	clk_disable_unprepare(dc->clk);
 
 	return 0;
