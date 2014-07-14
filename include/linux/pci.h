@@ -1400,6 +1400,77 @@ static inline struct pci_dev *pci_dev_get(struct pci_dev *dev) { return NULL; }
 #define dev_is_pci(d) (false)
 #define dev_is_pf(d) (false)
 #define dev_num_vf(d) (0)
+
+static inline int pci_enable_rom(struct pci_dev *pdev)
+{
+	return -ENOSYS;
+}
+
+static inline void pci_disable_rom(struct pci_dev *pdev)
+{
+}
+
+static inline void __iomem __must_check *pci_map_rom(struct pci_dev *pdev, size_t *size)
+{
+	return NULL;
+}
+
+static inline void pci_unmap_rom(struct pci_dev *pdev, void __iomem *rom)
+{
+}
+
+static inline size_t pci_get_rom_size(struct pci_dev *pdev, void __iomem *rom, size_t size)
+{
+	return 0;
+}
+
+static inline void __iomem __must_check *pci_platform_rom(struct pci_dev *pdev, size_t *size)
+{
+	return NULL;
+}
+
+static inline int pci_enable_msi(struct pci_dev *dev)
+{
+	return -ENOSYS;
+}
+
+static inline void pci_disable_msi(struct pci_dev *dev)
+{
+}
+
+static inline void *pci_alloc_consistent(struct pci_dev *dev, size_t size,
+					 dma_addr_t *dma_handle)
+{
+	return NULL;
+}
+
+static inline void pci_free_consistent(struct pci_dev *dev, size_t size,
+				       void *vaddr, dma_addr_t dma_handle)
+{
+}
+
+static inline dma_addr_t pci_map_page(struct pci_dev *hwdev, struct page *page,
+				      unsigned long offset, size_t size,
+				      int direction)
+{
+	return 0;
+}
+
+static inline void pci_unmap_page(struct pci_dev *dev, dma_addr_t dma_address,
+				  size_t size, int direction)
+{
+}
+
+static inline int pci_dma_mapping_error(struct pci_dev *dev,
+					dma_addr_t dma_addr)
+{
+	return -ENOSYS;
+}
+
+static inline int pci_dma_supported(struct pci_dev *dev, u64 mask)
+{
+	return 0;
+}
 #endif /* CONFIG_PCI */
 
 /* Include architecture-dependent settings and functions */
