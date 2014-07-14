@@ -538,6 +538,7 @@ struct sess_data {
 	struct kvec iov[3];
 };
 
+#ifdef CONFIG_CIFS_WEAK_PW_HASH
 static int
 sess_alloc_buffer(struct sess_data *sess_data, int wct)
 {
@@ -644,7 +645,6 @@ sess_sendreceive(struct sess_data *sess_data)
  * in proc/fs/cifs or via mount parm.  Unfortunately this is
  * needed for old Win (e.g. Win95), some obscure NAS and OS/2
  */
-#ifdef CONFIG_CIFS_WEAK_PW_HASH
 static void
 sess_auth_lanman(struct sess_data *sess_data)
 {
