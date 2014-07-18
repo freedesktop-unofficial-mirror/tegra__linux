@@ -80,6 +80,8 @@ struct generic_pm_domain {
 	s64 max_off_time_ns;	/* Maximum allowed "suspended" time. */
 	bool max_off_time_changed;
 	bool cached_power_down_ok;
+	bool (*of_match)(struct generic_pm_domain *domain,
+			 const struct of_phandle_args *args);
 	struct device_node *of_node; /* Node in device tree */
 	struct gpd_cpu_data *cpu_data;
 };
@@ -168,6 +170,11 @@ extern int pm_genpd_name_poweron(const char *domain_name);
 extern bool default_stop_ok(struct device *dev);
 
 extern struct dev_power_governor pm_domain_always_on_gov;
+
+extern int pm_genpd_attach(struct device *dev);
+extern int pm_genpd_detach(struct device *dev);
+extern int devm_pm_genpd_attach(struct device *dev);
+extern int devm_pm_genpd_detach(struct device *dev);
 #else
 
 static inline struct generic_pm_domain_data *dev_gpd_data(struct device *dev)
@@ -261,6 +268,26 @@ static inline bool default_stop_ok(struct device *dev)
 }
 #define simple_qos_governor NULL
 #define pm_domain_always_on_gov NULL
+
+static inline int pm_genpd_attach(struct device *dev)
+{
+	return 0;
+}
+
+static inline int pm_genpd_detach(struct device *dev)
+{
+	return 0;
+}
+
+static inline int devm_pm_genpd_attach(struct device *dev)
+{
+	return 0;
+}
+
+static inline int devm_pm_genpd_detach(struct device *dev)
+{
+	return 0;
+}
 #endif
 
 static inline int pm_genpd_add_device(struct generic_pm_domain *genpd,

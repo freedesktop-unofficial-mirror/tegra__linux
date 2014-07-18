@@ -2189,3 +2189,125 @@ void pm_genpd_init(struct generic_pm_domain *genpd,
 	list_add(&genpd->gpd_list_node, &gpd_list);
 	mutex_unlock(&gpd_list_lock);
 }
+
+static int of_pm_genpd_add_device(struct generic_pm_domain *genpd,
+				  struct device *dev)
+{
+	int err;
+
+	while (1) {
+		err = pm_genpd_add_device(genpd, dev);
+		if (err != -EAGAIN)
+			break;
+
+		cond_resched();
+	}
+
+	return err;
+}
+
+static struct generic_pm_domain *of_pm_genpd_attach(struct device *dev)
+{
+	struct generic_pm_domain *genpd;
+	struct of_phandle_args args;
+	int err;
+
+	err = of_parse_phandle_with_args(dev->of_node, "power-domains",
+					 "#power-domain-cells", 0, &args);
+	if (err < 0) {
+		if (err == -ENOENT)
+			err = 0;
+
+		return ERR_PTR(err);
+	}
+
+	mutex_lock(&gpd_list_lock);
+
+	list_for_each_entry(genpd, &gpd_list, gpd_list_node) {
+		if (genpd->of_node == args.np) {
+			if (genpd->of_match(genpd, &args)) {
+				err = of_pm_genpd_add_device(genpd, dev);
+				if (err < 0)
+					genpd = ERR_PTR(err);
+
+				goto unlock;
+			}
+		}
+	}
+
+	genpd = ERR_PTR(-EPROBE_DEFER);
+
+unlock:
+	mutex_unlock(&gpd_list_lock);
+	return genpd;
+}
+
+static struct generic_pm_domain *__pm_genpd_attach(struct device *dev)
+{
+	if (IS_ENABLED(CONFIG_OF) && dev->of_node)
+		return of_pm_genpd_attach(dev);
+
+	return NULL;
+}
+
+static int __pm_genpd_detach(struct generic_pm_domain *genpd,
+			     struct device *dev)
+{
+	int err;
+
+	while (1) {
+		err = pm_genpd_remove_device(genpd, dev);
+		if (err != -EAGAIN)
+			break;
+
+		cond_resched();
+	}
+
+	return err;
+}
+
+static void __devm_pm_genpd_detach(struct device *dev, void *res)
+{
+	struct generic_pm_domain *genpd = *(struct generic_pm_domain **)res;
+
+	(void)__pm_genpd_detach(genpd, dev);
+}
+
+int pm_genpd_attach(struct device *dev)
+{
+	struct generic_pm_domain *genpd;
+
+	genpd = __pm_genpd_attach(dev);
+	if (IS_ERR(genpd))
+		return PTR_ERR(genpd);
+
+	return 0;
+}
+
+int pm_genpd_detach(struct device *dev)
+{
+	struct generic_pm_domain *genpd = dev_to_genpd(dev);
+
+	return __pm_genpd_detach(genpd, dev);
+}
+
+int devm_pm_genpd_attach(struct device *dev)
+{
+	struct generic_pm_domain **ptr, *genpd;
+	int err = 0;
+
+	ptr = devres_alloc(__devm_pm_genpd_detach, sizeof(*ptr), GFP_KERNEL);
+	if (!ptr)
+		return -ENOMEM;
+
+	genpd = __pm_genpd_attach(dev);
+	if (IS_ERR_OR_NULL(genpd)) {
+		err = PTR_ERR(genpd);
+		devres_free(ptr);
+	} else {
+		devres_add(dev, ptr);
+		*ptr = genpd;
+	}
+
+	return err;
+}
