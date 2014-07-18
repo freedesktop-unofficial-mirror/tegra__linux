@@ -1,9 +1,9 @@
 #include <dt-bindings/clock/tegra124-car.h>
 #include <dt-bindings/gpio/tegra-gpio.h>
+#include <dt-bindings/memory/tegra124-mc.h>
 #include <dt-bindings/pinctrl/pinctrl-tegra.h>
 #include <dt-bindings/pinctrl/pinctrl-tegra-xusb.h>
 #include <dt-bindings/interrupt-controller/arm-gic.h>
-#include <dt-bindings/memory/tegra124-mc.h>
 
 #include "skeleton.dtsi"
 
@@ -104,9 +104,9 @@
 			resets = <&tegra_car 27>;
 			reset-names = "dc";
 
-			nvidia,head = <0>;
-
 			iommus = <&mc TEGRA_SWGROUP_DC>;
+
+			nvidia,head = <0>;
 		};
 
 		dc@0,54240000 {
@@ -119,9 +119,9 @@
 			resets = <&tegra_car 26>;
 			reset-names = "dc";
 
-			nvidia,head = <1>;
-
 			iommus = <&mc TEGRA_SWGROUP_DCB>;
+
+			nvidia,head = <1>;
 		};
 
 		hdmi@0,54280000 {
