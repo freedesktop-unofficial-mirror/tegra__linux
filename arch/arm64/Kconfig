@@ -146,7 +146,6 @@ config ARCH_TEGRA
 	select HAVE_SMP
 	select MIGHT_HAVE_CACHE_L2X0
 	select NEED_MACH_IO_H
-	select ARCH_TEGRA_132_SOC
 	select ARCH_HAS_CPUFREQ
 	select ARCH_HAS_RESET_CONTROLLER
 	select ARCH_SUPPORTS_TRUSTED_FOUNDATIONS
@@ -168,13 +167,17 @@ config ARCH_TEGRA
 	help
 	  This enables support for NVIDIA Tegra SoC family
 
+if ARCH_TEGRA
+
 config ARCH_TEGRA_132_SOC
 	bool "Enable support for Tegra132 family"
-	select HAVE_ARM_ARCH_TIMER
 	select PINCTRL_TEGRA124
+	default y
 	help
 	  Support for NVIDIA Tegra T132 processor family, based on the
 	  Denver ARMv8 CPU
+
+endif
 
 config ARCH_VEXPRESS
 	bool "ARMv8 software model (Versatile Express)"
