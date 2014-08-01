@@ -1001,7 +1001,7 @@ static int tegra_mc_probe(struct platform_device *pdev)
 	if (err < 0)
 		return err;
 
-	if (IS_ENABLED(CONFIG_IOMMU_API)) {
+	if (IS_ENABLED(CONFIG_TEGRA_IOMMU_SMMU)) {
 		mc->smmu = tegra_smmu_probe(&pdev->dev, mc->soc->smmu, mc);
 		if (IS_ERR(mc->smmu)) {
 			dev_err(&pdev->dev, "failed to probe SMMU: %ld\n",
@@ -1038,7 +1038,7 @@ static int tegra_mc_remove(struct platform_device *pdev)
 	struct tegra_mc *mc = platform_get_drvdata(pdev);
 	int err;
 
-	if (IS_ENABLED(CONFIG_IOMMU_API)) {
+	if (IS_ENABLED(CONFIG_TEGRA_IOMMU_SMMU)) {
 		err = tegra_smmu_remove(mc->smmu);
 		if (err < 0) {
 			dev_err(&pdev->dev, "failed to remove SMMU: %d\n",
