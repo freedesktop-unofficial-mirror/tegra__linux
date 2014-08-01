@@ -1570,12 +1570,12 @@ static int tegra_pcie_get_regulators(struct tegra_pcie *pcie, u32 lane_mask)
 			return -ENOMEM;
 
 		pcie->supplies[i++].supply = "avddio-pex";
-		pcie->supplies[i++].supply = "vddio-pex";
+		pcie->supplies[i++].supply = "dvddio-pex";
 		pcie->supplies[i++].supply = "avdd-pex-pll";
 		pcie->supplies[i++].supply = "hvdd-pex";
-		pcie->supplies[i++].supply = "hvdd-pex-plle";
+		pcie->supplies[i++].supply = "hvdd-pex-pll-e";
 		pcie->supplies[i++].supply = "vddio-pex-ctl";
-		pcie->supplies[i++].supply = "avdd-plle";
+		pcie->supplies[i++].supply = "avdd-pll-erefe";
 	} else if (of_device_is_compatible(np, "nvidia,tegra30-pcie")) {
 		bool need_pexa = false, need_pexb = false;
 
