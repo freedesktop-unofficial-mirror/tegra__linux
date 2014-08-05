@@ -44,15 +44,11 @@ typedef int (*iommu_fault_handler_t)(struct iommu_domain *,
 			struct device *, unsigned long, int, void *);
 
 struct iommu {
+	const struct iommu_ops *ops;
 	struct device *dev;
 
 	struct list_head list;
-
-	const struct iommu_ops *ops;
 };
-
-int iommu_add(struct iommu *iommu);
-void iommu_remove(struct iommu *iommu);
 
 struct iommu_domain_geometry {
 	dma_addr_t aperture_start; /* First address that can be mapped    */
@@ -153,6 +149,9 @@ struct iommu_ops {
 #define IOMMU_GROUP_NOTIFY_UNBOUND_DRIVER	6 /* Post Driver unbind */
 
 #ifdef CONFIG_IOMMU_API
+
+extern int iommu_add(struct iommu *iommu);
+extern void iommu_remove(struct iommu *iommu);
 
 extern int bus_set_iommu(struct bus_type *bus, const struct iommu_ops *ops);
 extern bool iommu_present(struct bus_type *bus);
@@ -259,6 +258,15 @@ static inline int report_iommu_fault(struct iommu_domain *domain,
 }
 
 #else /* CONFIG_IOMMU_API */
+
+static inline int iommu_add(struct iommu *iommu)
+{
+	return -ENOSYS;
+}
+
+static inline void iommu_remove(struct iommu *iommu)
+{
+}
 
 static inline int bus_set_iommu(struct bus_type *bus,
 				const struct iommu_ops *ops)
