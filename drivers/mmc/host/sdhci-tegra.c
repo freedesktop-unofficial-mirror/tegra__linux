@@ -239,9 +239,11 @@ static int sdhci_tegra_probe(struct platform_device *pdev)
 	if (!match)
 		return -EINVAL;
 
+	/*
 	rc = iommu_attach(&pdev->dev);
 	if (rc < 0)
 		return rc;
+	*/
 
 	soc_data = match->data;
 
@@ -316,7 +318,9 @@ static int sdhci_tegra_remove(struct platform_device *pdev)
 	clk_disable_unprepare(pltfm_host->clk);
 	clk_put(pltfm_host->clk);
 
+	/*
 	iommu_detach(&pdev->dev);
+	*/
 
 	sdhci_pltfm_free(pdev);
 
